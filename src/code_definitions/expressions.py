@@ -1,0 +1,4 @@
+
+
+class Expression(str):
+    pass
