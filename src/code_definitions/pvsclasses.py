@@ -1,35 +1,61 @@
 from .expressions import *
 
+# TODO: Function/loop to actually parse out a python file into all this stuff
+
 
 class AbstractBlock:
-    def __init__(self, keyword: str, content: list[Expression]):
-        self.keyword: str = keyword
+    keyword = ""
+
+    def __init__(self, content: list[Expression]) -> None:
         self._content: list[Expression] = content
         self.head: Expression = content[0]
         self.lines: list[Expression] = content[1:]
 
 
 class NamedBlock(AbstractBlock):
-    def __init__(self, content: list[Expression]):
+    keyword = ""
+
+    def __init__(self, content: list[Expression]) -> None:
         super().__init__(content)
-        self.name = self.head.removeprefix(self.keyword + " ")
+        self.regex_pattern = self.regex(self.keyword)
+        self.metadata = self.get_info()
+        self.name = self.metadata['name']
+
+    @staticmethod
+    def regex(keyword: str) -> re.Pattern:
+        return re.compile(rf"^[\t ]*{keyword} (?P<name>\w+).*:$")
+
+    def get_info(self) -> dict:
+        return re.match(self.regex_pattern, self.head).groupdict()
 
 
 class Function(NamedBlock):
-    def __init__(self, block: NamedBlock):
-        super().__init__(block.name, block._content)
+    keyword = "def"
+
+    def __init__(self, block: NamedBlock) -> None:
+        super().__init__(block._content)
         self.args: Expression = self.head
         self.returns: Expression = self.lines[-1]
 
 
+class Coroutine(Function):
+    keyword = "async def"
+
+
 class Method(Function):
-    def __init__(self, block: AbstractBlock, method_type: str = "object"):
+    def __init__(self, block: NamedBlock, method_type: str = "object") -> None:
         super().__init__(block)
         self.type: str = method_type  # whether the method is static or applies to the class or class instance
 
 
-class Class(AbstractBlock):
-    def __init__(self, block: AbstractBlock):
+class CoroMethod(Coroutine, Method):
+    pass
+
+
+class Class(NamedBlock):
+    keyword = "class"
+
+    def __init__(self, block: NamedBlock) -> None:  # TODO: this is incomplete
         self.block = block
         del block
         super().__init__(self.block.lines)
@@ -37,8 +63,22 @@ class Class(AbstractBlock):
         self.methods: list[Method]
 
 
+class If(AbstractBlock):  # TODO: if stuff
+    keyword = "if"
+
+
+class Elif(If):
+    keyword = "elif"
+
+
+class Else(AbstractBlock):
+    keyword = "else"
+
+
 class Conditional(AbstractBlock):
-    def __init__(self, block: AbstractBlock):
+    keyword = "if"
+
+    def __init__(self, block: AbstractBlock) -> None:
         self.block = block
         super().__init__(self.block.lines)
         self.If: tuple[Expression, AbstractBlock]
@@ -46,13 +86,13 @@ class Conditional(AbstractBlock):
         self.Else: Expression
 
 
-class Case:
+class MatchCase:  # TODO
+    keyword = "case"
+
+
+class Match(AbstractBlock):  # TODO
     pass
 
 
-class Match(AbstractBlock):
-    pass
-
-
-class Loop(AbstractBlock):
+class Loop(AbstractBlock):  # TODO
     pass
