@@ -5,7 +5,6 @@ from keyword import kwlist, softkwlist
 kwposs = ' |'.join(list(kwlist) + list(softkwlist))
 getwspc = re.compile(r"^(?P<whitespace>[\t ]*).*$", re.I)
 getkwds = re.compile(rf"^(?P<keyword>({kwposs})*)")
-funcinfo = re.compile(r"^\s*(?P<isasync>async )?def (?P<name>\w+)?\((?P<args>[\w:,= ]*)\):\s*$", re.I)
 
 
 general_line_re = re.compile(rf"""^([\t ]*)   # get amount of preceeding whitespace, for determininh block membership
@@ -17,7 +16,7 @@ general_line_re = re.compile(rf"""^([\t ]*)   # get amount of preceeding whitesp
                              flags=re.I | re.X)
 
 
-class Expression(str):
+class Expression:
     
     def __init__(self, line: str, line_num: int) -> None:  # TODO: Expression types e.g. variable set, function call
         self._indentation: str = re.match(getwspc, line).groupdict()['whitespace']
@@ -26,4 +25,36 @@ class Expression(str):
             raise SyntaxError("Inconsistent use of tabs and spaces!")
 
         self.indent_type: str = '\t' if uses_tabs else ' '
-        self.line: int = line_num
+        self.line: str = line
+        self.line_num: int = line_num
+
+    def __str__(self):
+        return self.line
+
+
+AVTC = r"[\w|_\s^\v]+"  # All Valid Typing Characters
+ST = r"[\s^\v]"  # Space or Tab - all whitespace minus vertical ones
+def OWO(operator: str): return rf"{ST}?{operator}{ST}?"  # Optionally Whitespaced Operator
+
+
+class Argument:
+
+    REGEX = re.compile(
+        rf"""
+        ^(?P<name>\w+)
+        (?P<has_typehint>{OWO(':')}?)?
+        (?(has_typehint)(?P<type>{AVTC})?|)?
+        (?P<has_default>{OWO('=')})?
+        (?(has_default)(?P<default>{AVTC})?|)?$""",
+        flags=re.I | re.X)
+
+    def __init__(self, raw: str):
+        match = re.match(self.REGEX, raw.strip())
+        assert match is not None, f"This argument is invalid!\n{raw}"
+
+        result = match.groupdict()
+        self.name: str = result.get('name', '').strip()
+        self.is_typed: bool = bool(result.get('has_typehint', False))
+        self.type: list[str] = [union_member.strip() for union_member in result.get('type', '').split("|")]
+        self.is_kwarg: bool = bool(result.get('has_default', False))
+        self.default: str = result.get('default', '')
