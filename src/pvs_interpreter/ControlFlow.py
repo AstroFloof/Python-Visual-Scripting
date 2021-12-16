@@ -2,22 +2,21 @@ from __future__ import annotations
 from .Blocks import *
 
 
-class File(NamedBlock):
-    pass  # TODO: no
-
-
 class Conditional(AbstractBlock):
     keyword = "if |elif |else |while "
 
-    def __init__(self, block: AbstractBlock) -> None:
-        self.block = block
-        super().__init__(self.block.lines)
-        self.if_condition: tuple[Expression, AbstractBlock]
-        self.elifs: list[Expression]
-        self.Else: Expression
+    def __init__(self, content: list[Expression]) -> None:
+        super().__init__(content)
+        self.condition: Expression = content[0].replace(self.keyword)
+        self.body: list[Expression] = content[1:]
 
+        # these two are mutually exclusive, so a chain of if-elif--elif-else
+        # is structured like this If If.Elif If.Elif.Elif If.Elif.Elif.Else
+        self.elif_: Elif = None  # elifs will chain
+        self.else_: Else = None  # must not have both
+        
 
-class If(AbstractBlock):  # TODO: if stuff
+class If(Conditional):  # TODO
     keyword = "if"
 
 
@@ -34,8 +33,16 @@ class MatchCase:  # TODO
 
 
 class Match(AbstractBlock):  # TODO
-    pass
+    keyword = "match"
 
 
 class Loop(AbstractBlock):  # TODO
     pass
+
+
+class While(Loop, Conditional):
+    keyword = "while"
+
+
+class For(Loop):
+    keyword = "for"
