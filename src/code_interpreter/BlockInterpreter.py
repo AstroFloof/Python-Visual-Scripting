@@ -1,7 +1,8 @@
 from __future__ import annotations
-from . import *
+from .Functions import *  # also gets Expressions, Blocks, and Class
+from .ControlFlow import *
 
-
+print(annotations)
 
 # TODO: Function/loop to actually parse out a python file into all this stuff
 

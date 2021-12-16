@@ -1,7 +1,7 @@
 from __future__ import annotations
 from copy import deepcopy
 from .Blocks import *
-from .Class import Class
+from .Class import *
 
 class Function(NamedBlock):
     keyword = "def"
